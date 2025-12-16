@@ -1,0 +1,202 @@
+import csv
+import os
+from datetime import datetime, date
+
+FILE_NAME = "tasks.csv"
+
+FIELDS = [
+    "user",
+    "id",
+    "title",
+    "description",
+    "priority",
+    "due_date",
+    "completed",
+    "created_at"
+]
+
+
+# ---------------- FILE HANDLING ----------------
+def load_tasks():
+    tasks = []
+    if os.path.exists(FILE_NAME):
+        with open(FILE_NAME, "r", newline="") as file:
+            reader = csv.DictReader(file)
+            for row in reader:
+                row["completed"] = row["completed"] == "True"
+                tasks.append(row)
+    return tasks
+
+
+def save_tasks(tasks):
+    with open(FILE_NAME, "w", newline="") as file:
+        writer = csv.DictWriter(file, fieldnames=FIELDS)
+        writer.writeheader()
+        writer.writerows(tasks)
+
+
+# ---------------- TASK UTILITIES ----------------
+def generate_id(tasks):
+    if not tasks:
+        return 1
+    return max(int(task["id"]) for task in tasks) + 1
+
+
+def add_task(tasks, user):
+    title = input("Title: ")
+    desc = input("Description: ")
+    priority = input("Priority (low/medium/high): ").lower()
+    due_date = input("Due Date (YYYY-MM-DD) or leave blank: ")
+
+    task = {
+        "user": user,
+        "id": str(generate_id(tasks)),
+        "title": title,
+        "description": desc,
+        "priority": priority,
+        "due_date": due_date,
+        "completed": False,
+        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+
+    tasks.append(task)
+    print("✅ Task added successfully!")
+
+
+def view_tasks(tasks, user):
+    user_tasks = [t for t in tasks if t["user"] == user]
+
+    if not user_tasks:
+        print("No tasks found.")
+        return
+
+    for task in user_tasks:
+        status = "✔" if task["completed"] else "✘"
+        print(f"""
+ID: {task['id']}
+Title: {task['title']}
+Priority: {task['priority']}
+Due Date: {task['due_date']}
+Status: {status}
+Created: {task['created_at']}
+-----------------------
+""")
+
+
+def edit_task(tasks, user):
+    task_id = input("Enter task ID to edit: ")
+
+    for task in tasks:
+        if task["id"] == task_id and task["user"] == user:
+            task["title"] = input("New Title: ")
+            task["description"] = input("New Description: ")
+            task["priority"] = input("New Priority: ")
+            task["due_date"] = input("New Due Date: ")
+            print("✏ Task updated!")
+            return
+
+    print("Task not found.")
+
+
+def delete_task(tasks, user):
+    task_id = input("Enter task ID to delete: ")
+    for task in tasks:
+        if task["id"] == task_id and task["user"] == user:
+            tasks.remove(task)
+            print("🗑 Task deleted!")
+            return
+    print("Task not found.")
+
+
+def mark_task(tasks, user):
+    task_id = input("Enter task ID: ")
+    for task in tasks:
+        if task["id"] == task_id and task["user"] == user:
+            task["completed"] = not task["completed"]
+            print("✔ Status updated!")
+            return
+    print("Task not found.")
+
+
+def sort_tasks(tasks, user):
+    print("1. Priority\n2. Completion\n3. Due Date")
+    choice = input("Sort by: ")
+
+    user_tasks = [t for t in tasks if t["user"] == user]
+
+    if choice == "1":
+        user_tasks.sort(key=lambda x: x["priority"])
+    elif choice == "2":
+        user_tasks.sort(key=lambda x: x["completed"])
+    elif choice == "3":
+        user_tasks.sort(key=lambda x: x["due_date"] or "9999-99-99")
+
+    for t in user_tasks:
+        print(t["id"], t["title"], t["priority"], t["completed"])
+
+
+def search_tasks(tasks, user):
+    keyword = input("Enter keyword: ").lower()
+    for task in tasks:
+        if task["user"] == user and keyword in task["title"].lower():
+            print(task["id"], task["title"])
+
+
+def due_reminders(tasks, user):
+    today = date.today()
+    print("\n📅 Due Today / Overdue Tasks:")
+    for task in tasks:
+        if task["user"] == user and task["due_date"]:
+            due = date.fromisoformat(task["due_date"])
+            if due <= today and not task["completed"]:
+                print(task["id"], task["title"], task["due_date"])
+
+
+# ---------------- MAIN PROGRAM ----------------
+def main():
+    tasks = load_tasks()
+    user = input("Enter username: ")
+
+    while True:
+        print("""
+1. Add Task
+2. View Tasks
+3. Edit Task
+4. Delete Task
+5. Mark Complete/Incomplete
+6. Sort Tasks
+7. Search Tasks
+8. Due Date Reminder
+9. Exit
+""")
+
+        choice = input("Choose option: ")
+
+        if choice == "1":
+            add_task(tasks, user)
+        elif choice == "2":
+            view_tasks(tasks, user)
+        elif choice == "3":
+            edit_task(tasks, user)
+        elif choice == "4":
+            delete_task(tasks, user)
+        elif choice == "5":
+            mark_task(tasks, user)
+        elif choice == "6":
+            sort_tasks(tasks, user)
+        elif choice == "7":
+            search_tasks(tasks, user)
+        elif choice == "8":
+            due_reminders(tasks, user)
+        elif choice == "9":
+            save_tasks(tasks)
+            print("💾 Data saved. Goodbye!")
+            break
+        else:
+            print("Invalid choice!")
+
+
+if __name__ == "__main__":
+    main()
+
+1
